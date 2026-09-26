@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 import { generateText } from 'ai';
 import { getGeminiModel } from '@/lib/gemini/client';
 import { RISK_ANALYSIS_PROMPT } from '@/lib/gemini/prompts';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase/server';
 
 export async function POST(request: Request) {
   try {
@@ -57,19 +57,20 @@ export async function POST(request: Request) {
     }
 
     try {
-      await (supabase.from('analyses') as any).insert({
+      const supabaseService = await createServiceRoleClient();
+      await (supabaseService.from('analyses') as any).insert({
         document_id: documentId,
         analysis_type: 'risk',
         result: parsedResult,
-        model_used: 'gemini-2.0-flash'
+        model_used: 'gemini-3.8-flash'
       });
     } catch (e) {
       console.error('Failed to cache risk analysis:', e);
     }
 
     return NextResponse.json(parsedResult);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Analyze API error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: error?.message || 'Internal server error' }, { status: 500 });
   }
 }

@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 import { streamText } from 'ai';
 import { getGeminiModel } from '@/lib/gemini/client';
 import { SIMPLIFY_PROMPT } from '@/lib/gemini/prompts';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase/server';
 
 export async function POST(request: Request) {
   try {
@@ -39,7 +39,10 @@ export async function POST(request: Request) {
       .single() as any;
 
     if (cached) {
-      return NextResponse.json(cached.result);
+      const cachedText = cached.result?.text || (typeof cached.result === 'string' ? cached.result : JSON.stringify(cached.result));
+      return new Response(cachedText, {
+        headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+      });
     }
 
     const result = streamText({
@@ -48,12 +51,12 @@ export async function POST(request: Request) {
       prompt: `Simplify the following legal text for a ${level} reading level:\n\n${document.original_text || ''}`,
       onFinish: async ({ text }) => {
         try {
-          const supabase = await createServerSupabaseClient();
-          await (supabase.from('analyses') as any).insert({
+          const supabaseService = await createServiceRoleClient();
+          await (supabaseService.from('analyses') as any).insert({
             document_id: documentId,
             analysis_type: 'simplify',
             result: { text, level },
-            model_used: 'gemini-2.0-flash',
+            model_used: 'gemini-3.8-flash',
           });
         } catch (e) {
           console.error('Failed to cache simplify analysis:', e);
@@ -62,8 +65,8 @@ export async function POST(request: Request) {
     });
 
     return result.toTextStreamResponse();
-  } catch (error) {
+  } catch (error: any) {
     console.error('Simplify API error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: error?.message || 'Internal server error' }, { status: 500 });
   }
 }

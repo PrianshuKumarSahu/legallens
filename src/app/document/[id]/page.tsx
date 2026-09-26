@@ -55,6 +55,7 @@ export default function DocumentAnalysisPage() {
   // Lawyer Prep State
   const [isPreparingLawyer, setIsPreparingLawyer] = useState(false);
   const [lawyerPrep, setLawyerPrep] = useState<LawyerPrepResult | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchDocument = async () => {
@@ -85,13 +86,17 @@ export default function DocumentAnalysisPage() {
   const handleSimplify = async () => {
     setIsSimplifying(true);
     setSimplifiedText('');
+    setActionError(null);
     try {
       const res = await fetch('/api/ai/simplify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ documentId: id }),
       });
-      if (!res.ok) throw new Error('Failed to simplify');
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null);
+        throw new Error(errJson?.error || `Failed to simplify (${res.status})`);
+      }
       
       const reader = res.body?.getReader();
       const decoder = new TextDecoder();
@@ -103,8 +108,9 @@ export default function DocumentAnalysisPage() {
         const chunk = decoder.decode(value, { stream: true });
         setSimplifiedText(prev => prev + chunk);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      setActionError(err.message || 'Simplification failed');
     } finally {
       setIsSimplifying(false);
     }
@@ -112,17 +118,22 @@ export default function DocumentAnalysisPage() {
 
   const handleAnalyzeRisk = async () => {
     setIsAnalyzingRisk(true);
+    setActionError(null);
     try {
       const res = await fetch('/api/ai/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ documentId: id }),
       });
-      if (!res.ok) throw new Error('Failed to analyze');
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null);
+        throw new Error(errJson?.error || `Failed to analyze risks (${res.status})`);
+      }
       const data = await res.json();
       setRiskAnalysis(data.result || data.riskAnalysis || data);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      setActionError(err.message || 'Risk analysis failed');
     } finally {
       setIsAnalyzingRisk(false);
     }
@@ -130,17 +141,22 @@ export default function DocumentAnalysisPage() {
 
   const handleSummarize = async () => {
     setIsSummarizing(true);
+    setActionError(null);
     try {
       const res = await fetch('/api/ai/summary', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ documentId: id }),
       });
-      if (!res.ok) throw new Error('Failed to summarize');
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null);
+        throw new Error(errJson?.error || `Failed to summarize (${res.status})`);
+      }
       const data = await res.json();
       setSummary(data.result || data.summary || data);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      setActionError(err.message || 'Summary generation failed');
     } finally {
       setIsSummarizing(false);
     }
@@ -154,14 +170,18 @@ export default function DocumentAnalysisPage() {
     setChatMessages(prev => [...prev, newMsg]);
     setChatInput('');
     setIsChatting(true);
+    setActionError(null);
 
     try {
       const res = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ documentId: id, messages: [...chatMessages, newMsg] }),
+        body: JSON.stringify({ documentId: id, message: newMsg.content }),
       });
-      if (!res.ok) throw new Error('Failed to chat');
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null);
+        throw new Error(errJson?.error || `Failed to chat (${res.status})`);
+      }
       
       const reader = res.body?.getReader();
       const decoder = new TextDecoder();
@@ -176,8 +196,9 @@ export default function DocumentAnalysisPage() {
         const chunk = decoder.decode(value, { stream: true });
         setChatMessages(prev => prev.map(m => m.id === asstMsg.id ? { ...m, content: m.content + chunk } : m));
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      setActionError(err.message || 'Chat query failed');
     } finally {
       setIsChatting(false);
     }
@@ -185,17 +206,22 @@ export default function DocumentAnalysisPage() {
 
   const handleLawyerPrep = async () => {
     setIsPreparingLawyer(true);
+    setActionError(null);
     try {
       const res = await fetch('/api/ai/prepare', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ documentId: id }),
       });
-      if (!res.ok) throw new Error('Failed to prepare for lawyer');
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null);
+        throw new Error(errJson?.error || `Failed to prepare for lawyer (${res.status})`);
+      }
       const data = await res.json();
       setLawyerPrep(data.result || data.prep || data);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      setActionError(err.message || 'Lawyer prep failed');
     } finally {
       setIsPreparingLawyer(false);
     }
@@ -221,6 +247,18 @@ export default function DocumentAnalysisPage() {
       </div>
 
       <LegalDisclaimer text={LEGAL_DISCLAIMER} />
+
+      {actionError && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center justify-between text-sm">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
+            <span>{actionError}</span>
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => setActionError(null)} className="text-red-700 hover:bg-red-100 h-8 px-2">
+            Dismiss
+          </Button>
+        </div>
+      )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="w-full justify-start overflow-x-auto">
@@ -248,13 +286,22 @@ export default function DocumentAnalysisPage() {
                 <div className="flex-1 flex flex-col items-center justify-center space-y-4">
                   <BookOpen className="h-12 w-12 text-slate-300" />
                   <p className="text-slate-500">Generate a plain-english version of this document.</p>
-                  <Button onClick={handleSimplify}>Simplify Document</Button>
+                  <Button onClick={handleSimplify} disabled={isSimplifying}>
+                    {isSimplifying ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Simplifying Document...
+                      </>
+                    ) : (
+                      'Simplify Document'
+                    )}
+                  </Button>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-4 h-full">
                   <ScrollArea className="h-full rounded-md border p-4 bg-slate-50">
                     <h3 className="font-semibold mb-4 text-slate-700 sticky top-0 bg-slate-50 pb-2">Original Text</h3>
-                    <pre className="text-sm whitespace-pre-wrap font-mono text-slate-600">{document.content}</pre>
+                    <pre className="text-sm whitespace-pre-wrap font-mono text-slate-600">{document.original_text || document.content}</pre>
                   </ScrollArea>
                   <ScrollArea className="h-full rounded-md border p-4 bg-blue-50">
                     <h3 className="font-semibold mb-4 text-blue-800 sticky top-0 bg-blue-50 pb-2">Simplified Text</h3>

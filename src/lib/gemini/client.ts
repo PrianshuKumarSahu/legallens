@@ -1,29 +1,32 @@
-import { google } from '@ai-sdk/google';
+import { createGoogle } from '@ai-sdk/google';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 /**
  * Get Google Gemini model for use with Vercel AI SDK
- * Uses gemini-2.0-flash for best free-tier rate limits (15 RPM, 1M TPM)
+ * Uses gemini-3.8-flash with explicit GEMINI_API_KEY injection
  */
-export function getGeminiModel(modelId: string = 'gemini-2.0-flash') {
-  return google(modelId);
+export function getGeminiModel(modelId: string = 'gemini-3.8-flash') {
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY || '';
+  const googleProvider = createGoogle({
+    apiKey,
+  });
+  return googleProvider(modelId);
 }
 
 /**
  * Get raw Google Generative AI client for embeddings
- * Uses text-embedding-004 for 768-dimensional vectors
  */
 export function getEmbeddingClient() {
-  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-  return genAI.getGenerativeModel({ model: 'text-embedding-004' });
+  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY || '');
+  return genAI.getGenerativeModel({ model: 'gemini-embedding-001' });
 }
 
 /**
  * Generate embeddings for a text chunk using Gemini
  */
 export async function generateEmbedding(text: string): Promise<number[]> {
-  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-  const model = genAI.getGenerativeModel({ model: 'text-embedding-004' });
+  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY || '');
+  const model = genAI.getGenerativeModel({ model: 'gemini-embedding-001' });
   const result = await model.embedContent(text);
   return result.embedding.values;
 }

@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 import { generateText } from 'ai';
 import { getGeminiModel } from '@/lib/gemini/client';
 import { COMPARISON_PROMPT } from '@/lib/gemini/prompts';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase/server';
 
 export async function POST(request: Request) {
   try {
@@ -48,7 +48,8 @@ export async function POST(request: Request) {
     }
 
     try {
-      await (supabase.from('comparisons') as any).insert({
+      const supabaseService = await createServiceRoleClient();
+      await (supabaseService.from('comparisons') as any).insert({
         document_a_id: documentAId,
         document_b_id: documentBId,
         user_id: user.id,
@@ -59,8 +60,8 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json(parsedResult);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Compare API error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: error?.message || 'Internal server error' }, { status: 500 });
   }
 }

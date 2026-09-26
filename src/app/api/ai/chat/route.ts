@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 import { streamText } from 'ai';
 import { getGeminiModel } from '@/lib/gemini/client';
 import { CHAT_SYSTEM_PROMPT } from '@/lib/gemini/prompts';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase/server';
 
 export async function POST(request: Request) {
   try {
@@ -31,8 +31,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Document not found' }, { status: 404 });
     }
 
+    const supabaseService = await createServiceRoleClient();
     try {
-      await (supabase.from('chat_messages') as any).insert({
+      await (supabaseService.from('chat_messages') as any).insert({
         document_id: documentId,
         user_id: user.id,
         role: 'user',
@@ -53,8 +54,7 @@ export async function POST(request: Request) {
       messages,
       onFinish: async ({ text }) => {
         try {
-          const supabase = await createServerSupabaseClient();
-          await (supabase.from('chat_messages') as any).insert({
+          await (supabaseService.from('chat_messages') as any).insert({
             document_id: documentId,
             user_id: user.id,
             role: 'assistant',
@@ -67,8 +67,8 @@ export async function POST(request: Request) {
     });
 
     return result.toTextStreamResponse();
-  } catch (error) {
+  } catch (error: any) {
     console.error('Chat API error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: error?.message || 'Internal server error' }, { status: 500 });
   }
 }
