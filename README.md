@@ -11,9 +11,12 @@
 [![Google Gemini](https://img.shields.io/badge/Google%20AI-Gemini%202.0%20Flash-4285F4?style=flat-square&logo=google)](https://ai.google.dev/)
 [![pgvector](https://img.shields.io/badge/pgvector-Semantic%20Search-336791?style=flat-square&logo=postgresql)](https://github.com/pgvector/pgvector)
 [![Vitest](https://img.shields.io/badge/Tests-26%20Passing-brightgreen?style=flat-square&logo=vitest)](https://vitest.dev/)
+[![Vercel Deployment](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=flat-square&logo=vercel)](https://legallens-two.vercel.app/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
 
 **Making complex legal information and agreements accessible, transparent, and actionable for everyone.**
+
+🚀 **Live Web App**: [https://legallens-two.vercel.app/](https://legallens-two.vercel.app/)
 
 [Overview](#-about) · [1-Click Judge Access](#-for-hackathon-judges--evaluators) · [Features](#-key-features) · [Google AI Services](#-google-services-integration) · [Architecture](#-architecture) · [Getting Started](#-getting-started) · [API Docs](#-api-endpoints)
 
